@@ -1,0 +1,22 @@
+{
+  "name": "hot-tub-monitor",
+  "version": "1.0.0",
+  "description": "Monitor ACC SmartLink spa temperature over WebSocket",
+  "main": "dist/spa-monitor.js",
+  "scripts": {
+    "start": "ts-node src/spa-monitor.ts",
+    "build": "tsc",
+    "dev": "ts-node-dev --respawn src/spa-monitor.ts"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.7.2"
+  }
+}
