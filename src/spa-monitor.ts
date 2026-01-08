@@ -66,7 +66,7 @@ const STATUS_AUX_HI    = 0x02;  // Bit 1 - AUX Hi (needs verification)
 const STATUS_JETS_LO   = 0x04;  // Bit 2 - Jets Lo (confirmed)
 const STATUS_JETS_HI   = 0x08;  // Bit 3 - Jets Hi (confirmed)
 const STATUS_FILTERING = 0x10;  // Bit 4 - Filtering (confirmed)
-const STATUS_SET_MODE  = 0x20;  // Bit 5 - Set/adjust mode active (confirmed)
+const STATUS_EDIT  = 0x20;  // Bit 5 - Edit indicator (temp adjustment active)
 const STATUS_AM        = 0x80;  // Bit 7 - AM indicator (confirmed)
 // Bit 6 (0x40): unknown - possibly AUX Lo, AUX II Lo/Hi, or Overheat
 
@@ -83,7 +83,7 @@ interface SpaState {
   jetsLo: boolean;      // from status byte 1 bit 2
   jetsHi: boolean;      // from status byte 1 bit 3
   filtering: boolean;   // from status byte 1 bit 4
-  setMode: boolean;     // from status byte 1 bit 5
+  edit: boolean;     // from status byte 1 bit 5
   lastStatusByte1: number | null;
   lastStatusByte2: number | null;
   stsI: number | null;
@@ -101,7 +101,7 @@ const state: SpaState = {
   jetsLo: false,
   jetsHi: false,
   filtering: false,
-  setMode: false,
+  edit: false,
   lastStatusByte1: null,
   lastStatusByte2: null,
   stsI: null,
@@ -258,10 +258,10 @@ function parseMessage(data: WebSocket.RawData): void {
             state.filtering = filtering;
             interpretations.push(`Filtering: ${filtering ? "ON" : "OFF"}`);
           }
-          const setMode = (display.statusByte1 & STATUS_SET_MODE) !== 0;
-          if (setMode !== state.setMode) {
-            state.setMode = setMode;
-            interpretations.push(`Set Mode: ${setMode ? "ON" : "OFF"}`);
+          const edit = (display.statusByte1 & STATUS_EDIT) !== 0;
+          if (edit !== state.edit) {
+            state.edit = edit;
+            interpretations.push(`Edit: ${edit ? "ON" : "OFF"}`);
           }
         }
 

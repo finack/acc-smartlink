@@ -107,7 +107,7 @@ The high bit (0x80) is used as a colon/decimal indicator.
 | 2 | 0x04 | Jets Lo |
 | 3 | 0x08 | Jets Hi |
 | 4 | 0x10 | Filtering |
-| 5 | 0x20 | Set Mode (temp adjustment active) |
+| 5 | 0x20 | Edit (temp adjustment active) |
 | 6 | 0x40 | (unknown - possibly AUX Lo, AUX II Lo/Hi, Overheat) |
 | 7 | 0x80 | AM indicator |
 
@@ -138,13 +138,13 @@ The high bit (0x80) is used as a colon/decimal indicator.
 
 ```
 ┌───┐   ┌───┐   ┌───┐   ┌───┐
-│ 1 │ . │ 2 │ : │ 3 │ · │ 4 │   4x 7-segment digits
-└───┘   └───┘   └───┘   └───┘
+│ 1 │ . │ 2 │ : │ 3 │ · │ 4 │  AM    4x 7-segment digits
+└───┘   └───┘   └───┘   └───┘  Edit
         dot    colon   dot
 
 Heating   Lo      Lo      Lo    Overheat   ← LED indicators
   On      Hi      Hi      Hi    Filtering
-─────────────────────────────────────────
+───────────────────────────────────────────
  Light    AUX    Jets   AUX II    Set      ← Buttons
 ```
 
