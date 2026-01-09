@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spa Monitor</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #4ecdc4;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .status-card {
+      background: #16213e;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+    }
+    .status-card.active {
+      background: #0f3460;
+      border: 2px solid #4ecdc4;
+    }
+    .status-card .value {
+      font-size: 2em;
+      font-weight: bold;
+      color: #4ecdc4;
+    }
+    .status-card .label {
+      font-size: 0.9em;
+      color: #888;
+      margin-top: 5px;
+    }
+    .status-card.temp .value {
+      color: #ff6b6b;
+    }
+    .indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #333;
+      margin-right: 5px;
+    }
+    .indicator.on {
+      background: #4ecdc4;
+      box-shadow: 0 0 10px #4ecdc4;
+    }
+    .range-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .range-btn {
+      background: #16213e;
+      border: 2px solid #333;
+      color: #eee;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    .range-btn:hover {
+      border-color: #4ecdc4;
+    }
+    .range-btn.active {
+      background: #0f3460;
+      border-color: #4ecdc4;
+    }
+    .chart-container {
+      background: #16213e;
+      border-radius: 10px;
+      padding: 20px;
+      height: 400px;
+    }
+    .last-update {
+      text-align: center;
+      color: #888;
+      margin-top: 20px;
+      font-size: 0.9em;
+    }
+    .last-update.stale {
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Spa Monitor</h1>
+
+    <div class="status-grid">
+      <div class="status-card temp">
+        <div class="value" id="temp">--</div>
+        <div class="label">Temperature</div>
+      </div>
+      <div class="status-card" id="heating-card">
+        <div class="value"><span class="indicator" id="heating-ind"></span>Heating</div>
+        <div class="label" id="heating-status">--</div>
+      </div>
+      <div class="status-card" id="jets-card">
+        <div class="value"><span class="indicator" id="jets-ind"></span>Jets</div>
+        <div class="label" id="jets-status">--</div>
+      </div>
+      <div class="status-card" id="filtering-card">
+        <div class="value"><span class="indicator" id="filtering-ind"></span>Filter</div>
+        <div class="label" id="filtering-status">--</div>
+      </div>
+      <div class="status-card" id="light-card">
+        <div class="value"><span class="indicator" id="light-ind"></span>Light</div>
+        <div class="label" id="light-status">--</div>
+      </div>
+    </div>
+
+    <div class="range-buttons">
+      <button class="range-btn" data-range="1h">1 Hour</button>
+      <button class="range-btn active" data-range="24h">24 Hours</button>
+      <button class="range-btn" data-range="7d">7 Days</button>
+      <button class="range-btn" data-range="30d">30 Days</button>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="tempChart"></canvas>
+    </div>
+
+    <div class="last-update">
+      Last updated: <span id="last-update">--</span>
+    </div>
+  </div>
+
+  <script>
+    let chart;
+    let currentRange = '24h';
+    let lastUpdateTimestamp = null;
+
+    // Initialize mixed chart (line for temp, bar for heating)
+    function initChart() {
+      const ctx = document.getElementById('tempChart').getContext('2d');
+      chart = new Chart(ctx, {
+        data: {
+          datasets: [
+            {
+              type: 'line',
+              label: 'Temperature (°F)',
+              data: [],
+              borderColor: '#ff6b6b',
+              backgroundColor: 'rgba(255, 107, 107, 0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 2,
+              yAxisID: 'y',
+            },
+            {
+              type: 'bar',
+              label: 'Heating',
+              data: [],
+              backgroundColor: 'rgba(78, 205, 196, 0.6)',
+              borderColor: '#4ecdc4',
+              borderWidth: 1,
+              yAxisID: 'y1',
+              barPercentage: 1.0,
+              categoryPercentage: 1.0,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'hour',
+                displayFormats: {
+                  minute: 'HH:mm',
+                  hour: 'MMM d, HH:mm',
+                  day: 'MMM d'
+                }
+              },
+              grid: {
+                color: '#333'
+              },
+              ticks: {
+                color: '#888'
+              }
+            },
+            y: {
+              type: 'linear',
+              position: 'left',
+              min: 90,
+              max: 110,
+              grid: {
+                color: '#333'
+              },
+              ticks: {
+                color: '#888',
+                callback: (value) => value + '°F'
+              },
+              title: {
+                display: true,
+                text: 'Temperature',
+                color: '#ff6b6b'
+              }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              min: 0,
+              max: 1,
+              grid: {
+                drawOnChartArea: false,
+              },
+              ticks: {
+                color: '#4ecdc4',
+                stepSize: 1,
+                callback: (value) => value === 1 ? 'ON' : value === 0 ? 'OFF' : ''
+              },
+              title: {
+                display: true,
+                text: 'Heating',
+                color: '#4ecdc4'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: true,
+              labels: {
+                color: '#888'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Fetch readings and update chart
+    async function fetchReadings() {
+      try {
+        const response = await fetch(`/api/readings?range=${currentRange}`);
+        const readings = await response.json();
+
+        // Temperature data
+        const tempData = readings
+          .filter(r => r.temperature !== null)
+          .map(r => ({
+            x: new Date(r.timestamp),
+            y: r.temperature
+          }));
+
+        // Heating data (0 or 1)
+        const heatingData = readings.map(r => ({
+          x: new Date(r.timestamp),
+          y: r.heating ? 1 : 0
+        }));
+
+        chart.data.datasets[0].data = tempData;
+        chart.data.datasets[1].data = heatingData;
+
+        // Adjust time unit based on range
+        if (currentRange === '1h') {
+          chart.options.scales.x.time.unit = 'minute';
+        } else if (currentRange === '24h') {
+          chart.options.scales.x.time.unit = 'hour';
+        } else {
+          chart.options.scales.x.time.unit = 'day';
+        }
+
+        // Auto-scale Y axis based on data
+        if (tempData.length > 0) {
+          const temps = tempData.map(d => d.y);
+          const minTemp = Math.min(...temps);
+          const maxTemp = Math.max(...temps);
+          chart.options.scales.y.min = Math.floor(minTemp - 5);
+          chart.options.scales.y.max = Math.ceil(maxTemp + 5);
+        }
+
+        chart.update();
+      } catch (err) {
+        console.error('Failed to fetch readings:', err);
+      }
+    }
+
+    // Fetch current status from database
+    async function fetchCurrentStatus() {
+      try {
+        const response = await fetch('/api/current');
+        if (!response.ok) {
+          document.getElementById('temp').textContent = '--';
+          return;
+        }
+
+        const state = await response.json();
+
+        // Update temperature
+        document.getElementById('temp').textContent =
+          state.temperature !== null ? `${state.temperature}°F` : '--';
+
+        // Update indicators
+        updateIndicator('heating', state.heating);
+        updateIndicator('filtering', state.filtering);
+        updateIndicator('light', state.lightOn);
+
+        // Jets status
+        const jetsInd = document.getElementById('jets-ind');
+        const jetsStatus = document.getElementById('jets-status');
+        const jetsCard = document.getElementById('jets-card');
+        if (state.jetsHi) {
+          jetsInd.classList.add('on');
+          jetsStatus.textContent = 'HIGH';
+          jetsCard.classList.add('active');
+        } else if (state.jetsLo) {
+          jetsInd.classList.add('on');
+          jetsStatus.textContent = 'LOW';
+          jetsCard.classList.add('active');
+        } else {
+          jetsInd.classList.remove('on');
+          jetsStatus.textContent = 'OFF';
+          jetsCard.classList.remove('active');
+        }
+
+        // Store timestamp for relative time display
+        lastUpdateTimestamp = state.timestamp;
+        updateLastUpdateDisplay();
+
+      } catch (err) {
+        console.error('Failed to fetch current status:', err);
+      }
+    }
+
+    function updateIndicator(name, isOn) {
+      const ind = document.getElementById(`${name}-ind`);
+      const status = document.getElementById(`${name}-status`);
+      const card = document.getElementById(`${name}-card`);
+
+      if (isOn) {
+        ind.classList.add('on');
+        status.textContent = 'ON';
+        card.classList.add('active');
+      } else {
+        ind.classList.remove('on');
+        status.textContent = 'OFF';
+        card.classList.remove('active');
+      }
+    }
+
+    // Update the "last updated" display with relative time
+    function updateLastUpdateDisplay() {
+      if (!lastUpdateTimestamp) {
+        document.getElementById('last-update').textContent = '--';
+        return;
+      }
+
+      const now = Date.now();
+      const diff = now - lastUpdateTimestamp;
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+
+      const updateEl = document.getElementById('last-update');
+      const containerEl = updateEl.parentElement;
+
+      let text;
+      if (minutes < 1) {
+        text = 'just now';
+      } else if (minutes === 1) {
+        text = '1 minute ago';
+      } else if (minutes < 60) {
+        text = `${minutes} minutes ago`;
+      } else if (hours === 1) {
+        text = '1 hour ago';
+      } else {
+        text = `${hours} hours ago`;
+      }
+
+      updateEl.textContent = text;
+
+      // Mark as stale if older than 10 minutes
+      if (minutes > 10) {
+        containerEl.classList.add('stale');
+      } else {
+        containerEl.classList.remove('stale');
+      }
+    }
+
+    // Range button handlers
+    document.querySelectorAll('.range-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentRange = btn.dataset.range;
+        fetchReadings();
+      });
+    });
+
+    // Initialize
+    initChart();
+    fetchReadings();
+    fetchCurrentStatus();
+
+    // Auto-refresh (data only changes every 5 minutes)
+    setInterval(fetchCurrentStatus, 60000);  // Status every minute
+    setInterval(fetchReadings, 60000);       // Chart every minute
+    setInterval(updateLastUpdateDisplay, 30000); // Update relative time every 30s
+  </script>
+</body>
+</html>

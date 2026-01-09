@@ -108,7 +108,7 @@ The high bit (0x80) is used as a colon/decimal indicator.
 | 3 | 0x08 | Jets Hi |
 | 4 | 0x10 | Filtering |
 | 5 | 0x20 | Edit (temp adjustment active) |
-| 6 | 0x40 | (unknown - possibly AUX Lo, AUX II Lo/Hi, Overheat) |
+| 6 | 0x40 | Overheat warning |
 | 7 | 0x80 | AM indicator |
 
 ### Status Byte 2 (Byte 5)
@@ -116,7 +116,9 @@ The high bit (0x80) is used as a colon/decimal indicator.
 | Bit | Value | Indicator |
 |-----|-------|-----------|
 | 4 | 0x10 | Light On |
-| other | ? | (unknown - possibly Overheat, Filtering) |
+| 5 | 0x20 | Jets 2 Hi |
+| 6 | 0x40 | Jets 2 Lo |
+| 7 | 0x80 | AUX Lo |
 
 ### Example Messages
 
@@ -142,11 +144,20 @@ The high bit (0x80) is used as a colon/decimal indicator.
 └───┘   └───┘   └───┘   └───┘  Edit
         dot    colon   dot
 
-Heating   Lo      Lo      Lo    Overheat   ← LED indicators
+Heating   Lo      Lo      Lo    Overheat   ← LED indicators (byte 4)
   On      Hi      Hi      Hi    Filtering
+       (AUX)   (Jets)  (Jets2)
+
+ Light   Lo      Hi                        ← LED indicators (byte 5)
+        (AUX)  (Jets2)
 ───────────────────────────────────────────
  Light    AUX    Jets   AUX II    Set      ← Buttons
 ```
+
+### Temperature Scale
+
+- `0xF1` at byte 0 = Fahrenheit (currently supported)
+- `0xB9` at byte 0 = Celsius (not yet implemented)
 
 ## Hardware
 

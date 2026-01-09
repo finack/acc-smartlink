@@ -9,10 +9,14 @@
     "dev": "ts-node-dev --respawn src/spa-monitor.ts"
   },
   "dependencies": {
+    "better-sqlite3": "^12.5.0",
     "dotenv": "^17.2.3",
+    "express": "^5.2.1",
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.10.0",
     "@types/ws": "^8.5.13",
     "ts-node": "^10.9.2",
