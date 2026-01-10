@@ -1,0 +1,18 @@
+services:
+  spa-monitor:
+    build: .
+    # To build from GitHub instead of local files, replace the above with:
+    # build:
+    #   context: https://github.com/USERNAME/REPO.git#main
+    ports:
+      - "3000:3000"
+    environment:
+      - SPA_TOKEN=${SPA_TOKEN}
+      - PORT=3000
+      - DB_PATH=/app/data/spa-data.db
+    volumes:
+      - spa-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  spa-data:

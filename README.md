@@ -20,6 +20,57 @@ Get your token from your accsmartlink.com URL:
 https://accsmartlink.com/spa/{TOKEN}/app
 ```
 
+## Docker
+
+### Run with Docker Compose (local build)
+
+```bash
+# Set your spa token
+echo "SPA_TOKEN=your_token_here" > .env
+
+# Build and run
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
+```
+
+The dashboard will be available at http://localhost:3000
+
+### Run from GitHub (no local clone needed)
+
+Create a `docker-compose.yml` file:
+
+```yaml
+services:
+  spa-monitor:
+    build:
+      context: https://github.com/USERNAME/REPO.git#main
+    ports:
+      - "3000:3000"
+    environment:
+      - SPA_TOKEN=${SPA_TOKEN}
+    volumes:
+      - spa-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  spa-data:
+```
+
+Then run:
+```bash
+export SPA_TOKEN=your_token_here
+docker compose up -d
+```
+
+### Data Persistence
+
+The SQLite database is stored in a Docker volume (`spa-data`). Data persists across container restarts and rebuilds.
+
 ## Protocol Documentation
 
 ### WebSocket Connection
